@@ -8,7 +8,7 @@ filestream = None
 symbol = ''
 A_COMMAND_REX = re.compile(r'^@[\w]+')
 C_COMMAND_REX = re.compile(r'^[AMD0]') # 改良の余地あり
-L_COMMAND_REX = re.compile(r'^\([\w]+\)$')
+L_COMMAND_REX = re.compile(r'^\(.+\)$')
 
 
 class Parser:
