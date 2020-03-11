@@ -24,6 +24,7 @@ class Symboltable:
         self.symboltable['LCL']=1
         self.symboltable['ARG']=2
         self.symboltable['THIS']=3
+        self.symboltable['THAT']=4
 
     def addEntry(self, symbol, address):
         self.symboltable[symbol]=address
