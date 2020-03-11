@@ -9,7 +9,7 @@ symbol = ''
 A_COMMAND_REX = re.compile(r'^@[\w]+')
 C_COMMAND_REX = re.compile(r'^[AMD0]') # 改良の余地あり
 L_COMMAND_REX = re.compile(r'^\([\w]+\)$')
-NUM_REX=re.compile(r'[\d]+')
+
 
 class Parser:
 
@@ -17,13 +17,18 @@ class Parser:
         self.filestream = filestream
 
     def hasMoreCommands(self):
-        #入力を受け取る。
+        # 入力を受け取る。
         self.nowline=self.filestream.readline()
         return self.nowline
 
     def advance(self):
-        #改行削除
+        # delete \n
         self.nowline=self.nowline.replace('\n','')
+        # deleate head blank
+        self.nowline=self.nowline.replace(' ','')
+        # delete //
+        self.nowline=self.nowline.split('/')[0]
+
     
     def commandType(self):
         
@@ -36,9 +41,12 @@ class Parser:
         else:
             return "False Command!"
     
+
     def symbol(self)->str:
-        self.searchobject=re.search(r'[\w]+',self.nowline)
-        return self.searchobject.group()
+        # This method is colled when nowline=A_COMMAND
+        # input format @XXXXX
+        # remove @
+        return self.nowline[1:]
 
     def dest(self):
         if '=' in self.nowline:
@@ -59,3 +67,9 @@ class Parser:
             return self.nowline.split(';')[1]
         else:
             return ''
+
+    def getLabel(self):
+        # This method is colled when nowline=L_COMMAND
+        # input format (XXXXX)
+        return self.nowline[1:-1]
+
