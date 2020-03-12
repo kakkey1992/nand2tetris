@@ -17,21 +17,18 @@ else:
 for vmfile in vmfiles:
     f=open(vmfile,'r')
     p = Parser.Parser(f)
+    c.setFileName(vmfile.split('/')[-1].split('.')[0])
 
-    while True:
-
-        if p.hasMoreCommands():
-            p.advance()
-            commandType=p.commandType()
-        else:
-            break
-
-        if commandType == 'C_ARITHMETIC':
+    while p.hasMoreCommands():
+        p.advance()
+        if p.commandType() == 'C_ARITHMETIC':
             c.writeArithmetic(p.arg1())
 
-        elif commandType == 'C_PUSH':
+        elif p.commandType() == 'C_PUSH':
             c.writePushPop('push',p.arg1(),p.arg2())
 
+        elif p.commandType() == 'C_POP':
+            c.writePushPop('pop',p.arg1(),p.arg2())
 
 c.close()
 
