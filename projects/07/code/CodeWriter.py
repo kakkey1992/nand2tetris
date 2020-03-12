@@ -93,7 +93,7 @@ class CodeWriter:
             elif segment in ['local','argument','this','that','pointer','temp']:
                 PushDict[segment][2]='@'+str(index)
             elif segment == 'static':
-                PushDict[segment][0]='@'+self.filename+'.'+str(index)
+                PushDict[segment][0]='@'+self.fileName+'.'+str(index)
 
             for cmd in PushDict[segment]:
                 self.filestream.write(cmd+'\n')
