@@ -110,13 +110,12 @@ class CodeWriter:
 
             for cmd in PopDict[segment]:
                 self.filestream.write(cmd+'\n')
-            
-    def writeLabel(self,label):
+
+    def writeLabel(self,label): 
         self.filestream.write('('+label+')\n')
 
     def writeGoto(self,label):
         self.Gotolist=['@'+label,'0;JMP']
-
         for cmd in self.Gotolist:
             self.filestream.write(cmd+'\n')
 
@@ -124,7 +123,6 @@ class CodeWriter:
         self.Iflist=['@SP','AM=M-1','D=M','@'+label,'D;JNE']
 
         for cmd in self.Iflist:
-            print(cmd)
             self.filestream.write(cmd+'\n')
 
     def close(self):
