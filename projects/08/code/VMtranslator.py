@@ -41,6 +41,16 @@ for vmfile in vmfiles:
         elif commandType == 'C_IF':
             c.writeIf(p.arg1())
 
+        elif commandType == 'C_FUNCTION':
+            c.writeFunction(p.arg1(),p.arg2())
+        
+        elif commandType == 'C_CALL':
+            c.writeCall(p.arg1(),p.arg2())
+
+        elif commandType == 'C_RETURN':
+            c.writeReturn()
+
+
 c.close()
 
         

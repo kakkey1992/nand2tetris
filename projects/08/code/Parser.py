@@ -12,9 +12,9 @@ C_POP_REX =  re.compile(r'^pop[\s]+(local|argument|this|that|constant|pointer|te
 C_LABEL_REX = re.compile(r'^label[\s]+')
 C_GOTO_REX = re.compile(r'^goto[\s]+')
 C_IF_REX = re.compile(r'^if-goto[\s]+')
-#C_FUNCTION_REX = re.compile(r'')
-#C_RETURN = re.compile(r'')
-#C_CALL =  re.compile(r'')
+C_FUNCTION_REX = re.compile(r'^function[\s]+')
+C_RETURN_REX = re.compile(r'^return')
+C_CALL_REX =  re.compile(r'^call[\s]+')
 
 
 class Parser:
@@ -48,6 +48,12 @@ class Parser:
             return 'C_GOTO'
         elif C_IF_REX.search(self.nowline):
             return 'C_IF'
+        elif C_CALL_REX.search(self.nowline):
+            return 'C_CALL'
+        elif C_FUNCTION_REX.search(self.nowline):
+            return 'C_FUNCTION'
+        elif C_RETURN_REX.search(self.nowline):
+            return 'C_RETURN'
         else:
             return 'False Command!'
 
@@ -62,4 +68,4 @@ class Parser:
     def arg2(self):
         self.splitted_command=self.nowline.split(' ')
         if len(self.splitted_command) >=3:
-            return self.splitted_command[2]
+            return int(self.splitted_command[2])
