@@ -1,0 +1,33 @@
+/** Initializes a new Square Dance game and starts running it. */
+class Main {
+    function void main() {
+        var CircleGame game;
+        var int Cx, Cy, Cr;
+
+        let Cx = 0;
+        let Cy = 0;
+        let Cr = 0;
+
+        let Cx = Keyboard.readInt("Please input x value: ");
+        do Output.printInt(Cx);
+        do Output.println();
+        let Cy = Keyboard.readInt("Please input y value: ");
+        do Output.printInt(Cy);
+        do Output.println();
+        let Cr = Keyboard.readInt("Please input r value: ");
+        do Output.printInt(Cr);
+        do Output.println();
+
+        if ( ((Cx + Cr) > 511)  | ((Cy + Cr) > 254 ) ) {
+            do Output.printString("Illegal Input. You shoud satisfy the condition (x+r < 511) and (y+r < 254).");
+            do Output.println();
+            do Output.printString("CircleGame will be stopped.");
+            return;
+        }
+
+        let game = CircleGame.new(Cx,Cy,Cr);
+        do game.run();
+        do game.dispose();
+        return;
+    }
+}

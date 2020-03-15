@@ -6,7 +6,7 @@ nowline='\n'
 filestream = None
 
 # need to be implemented
-C_ARITHMETIC_REX = re.compile(r'add|sub|not|gt|neg|eq|gt|lt|and|or|not')
+C_ARITHMETIC_REX = re.compile(r'^(add|sub|not|gt|neg|eq|gt|lt|and|or|not)')
 C_PUSH_REX = re.compile(r'^push[\s]+(local|argument|this|that|constant|pointer|temp|static)[\s]+[\d]+')
 C_POP_REX =  re.compile(r'^pop[\s]+(local|argument|this|that|constant|pointer|temp|static)[\s]+[\d]+')
 C_LABEL_REX = re.compile(r'^label[\s]+')
@@ -34,7 +34,7 @@ class Parser:
         self.nowline=self.nowline.split('//')[0]
         # delete spases at end of columns
         self.nowline=re.sub(r'[\s]+$','',self.nowline)
-        #print(self.nowline)
+        print(self.nowline)
 
 
     def commandType(self):
@@ -61,6 +61,8 @@ class Parser:
 
     def arg1(self):
         self.splitted_command=self.nowline.split(' ')
+        print(self.splitted_command,len(self.splitted_command))
+        print(self.commandType())
         if len(self.splitted_command)==1:
             return self.splitted_command[0]
 

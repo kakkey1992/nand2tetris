@@ -1,0 +1,106 @@
+/** Implements a graphical circle. */
+class Circle {
+
+   field int x, y, r; // x,y is the center of the circle, r is the radius
+
+   /** Constructs a new Circle with a given location and size. */
+   constructor Circle new(int Cx, int Cy, int Cr) {
+      let x = Cx;
+      let y = Cy;
+      let r = Cr;
+      do draw();
+      return this;
+   }
+
+   /** Disposes this circle. */
+   method void dispose() {
+      do Memory.deAlloc(this);
+      return;
+   }
+
+   /** Draws the circle on the screen. */
+   method void draw() {
+      do Screen.setColor(true);
+      do Screen.drawCircle(x, y, r);
+      return;
+   }
+
+   /** Erases the circle from the screen. */
+   method void erase() {
+      do Screen.setColor(false);
+      do Screen.drawCircle(x, y, r);
+      return;
+   }
+
+    /** Increments the circle size by 2 pixels. */
+   method void incSize() {
+      if (((x + r) < 510) & ((y + r) < 254) & (x - r) > 3 & (y - r) > 3) {
+         do erase();
+         let r = r + 2;
+         do draw();
+      }
+      return;
+   }
+
+   /** Decrements the circle size by 2 pixels. */
+   method void decSize() {
+      if (r > 3) {
+         do erase();
+         let r = r - 2;
+         do draw();
+      }
+      return;
+   }
+
+   /** Moves the circle up by 2 pixels. */
+   method void moveUp() {
+      if ((y-r) > 1) {
+         do Screen.setColor(false);
+         do Screen.drawCircle(x, y, r);
+         let y = y - 2;
+         do Screen.setColor(true);
+         do Screen.drawCircle(x, y, r);
+      }
+      return;
+   }
+
+   /** Moves the circle down by 2 pixels. */
+   method void moveDown() {
+      if ((y + r) < 254) {
+         do Screen.setColor(false);
+         do Screen.drawCircle(x, y, r);
+         let y = y + 2;
+         do Screen.setColor(true);
+         do Screen.drawCircle(x, y, r);
+      }
+      return;
+   }
+
+
+
+   /** Moves the circle left by 2 pixels. */
+   method void moveLeft() {
+      if ((x-r) > 1) {
+         do Screen.setColor(false);
+         do Screen.drawCircle(x, y, r);
+         let x = x - 2;
+         do Screen.setColor(true);
+         do Screen.drawCircle(x, y, r);
+      }
+      return;
+   }
+
+   /** Moves the circle left by 2 pixels. */
+   method void moveRight() {
+      if ((x+r) < 510) {
+         do Screen.setColor(false);
+         do Screen.drawCircle(x, y, r);
+         let x = x + 2;
+         do Screen.setColor(true);
+         do Screen.drawCircle(x, y, r);
+      }
+      return;
+   }
+
+
+}
