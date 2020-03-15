@@ -6,10 +6,11 @@ import Parser
 
 inputname = sys.argv[1]
 c =  CodeWriter.CodeWriter(inputname)
-
+c.writeInit()
 vmfiles=[]
 
 if '.vm' not in inputname:
+    os.chdir(inputname)
     vmfiles=glob.glob(os.getcwd() + '/*.vm')  
 else:
     vmfiles.append(os.getcwd()+'/'+inputname)
@@ -22,7 +23,7 @@ for vmfile in vmfiles:
     while p.hasMoreCommands():
         p.advance()
         commandType=p.commandType()
-        print(commandType)
+
         if commandType == 'C_ARITHMETIC':
             c.writeArithmetic(p.arg1())
 

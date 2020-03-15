@@ -64,6 +64,9 @@ PopDict={
 
 }
 
+
+nowFunction=['null']
+
 class CodeWriter:
 
     def __init__(self, inputfile):
@@ -71,6 +74,21 @@ class CodeWriter:
         self.outfile = self.vmname + '.asm'
         self.filestream = open(self.outfile, 'w')
         self.cmpcount=0
+        self.labelindex=0
+
+    def writeInit(self):
+        self.writeSetSymbol('SP',256)
+        self.writeSetSymbol('LCL',300)
+        self.writeSetSymbol('ARG',400)
+        self.writeSetSymbol('THIS',3000)
+        self.writeSetSymbol('THAT',4000)
+        self.writeCall('Sys.init',0)
+
+    def writeSetSymbol(self,symbol,initialValue):
+        self.cmdlist=['@'+str(initialValue),'D=A','@'+symbol,'M=D']
+        for cmd in self.cmdlist:
+            self.filestream.write(cmd+'\n')
+            
 
     def setFileName(self, fileName):
         self.fileName=fileName
@@ -87,61 +105,73 @@ class CodeWriter:
             self.filestream.write(cmd+'\n')
         
     def writePushPop(self, command, segment, index):
-        
         if command=='push':
             self.writePush(segment,index)
-            '''
-            if segment == 'constant':
-                PushDict[segment][0]='@'+str(index)     
-            elif segment in ['local','argument','this','that','pointer','temp']:
-                PushDict[segment][2]='@'+str(index)
-            elif segment == 'static':
-                PushDict[segment][0]='@'+self.fileName+'.'+str(index)
-
-            for cmd in PushDict[segment]:
-                self.filestream.write(cmd+'\n')
-            
-            for cmd in PushDict['pushD']:
-                self.filestream.write(cmd+'\n')
-            '''
-
         elif command=='pop':
-            self.writePush(segment,index)
-            '''
-            if segment in ['local','argument','this','that','pointer','temp']:
-                PopDict[segment][2]='@'+str(index)
-
-            elif segment == 'static':
-                PopDict[segment][3]='@'+self.fileName+'.'+str(index)
-
-            for cmd in PopDict[segment]:
-                self.filestream.write(cmd+'\n')
-            '''
+            self.writePop(segment,index)
 
     def writeLabel(self,label): 
         self.filestream.write('('+label+')\n')
 
     def writeGoto(self,label):
+        # self.Gotolist=['@'+nowFunction[-1]+'$'+label,'0;JMP']
         self.Gotolist=['@'+label,'0;JMP']
         for cmd in self.Gotolist:
             self.filestream.write(cmd+'\n')
 
     def writeIf(self,label):
+        # self.Iflist=['@SP','AM=M-1','D=M','@'+nowFunction[-1]+'$'+label,'D;JNE']
         self.Iflist=['@SP','AM=M-1','D=M','@'+label,'D;JNE']
 
         for cmd in self.Iflist:
             self.filestream.write(cmd+'\n')
 
     def writeFunction(self,functionName,numVar):
+        # nowFunction.append(functionName)
         self.filestream.write('('+functionName+')\n')
-
         for _ in range(numVar):
             self.writePush('constant',0)
 
     def writeCall(self,functionName,numArg):
-        print('writeCall')
+        self.labelindex += 1
+        # Push Retrun address
+        self.cmdlist=['@return_address'+str(self.labelindex),'D=A']
+        for cmd in self.cmdlist:
+            self.filestream.write(cmd+'\n')
+        for cmd in PushDict['pushD']:
+                self.filestream.write(cmd+'\n')
+
+        # push LCL, push ARG, push THIS push THAT
+        self.writePushSymbol('LCL')
+        self.writePushSymbol('ARG')
+        self.writePushSymbol('THIS')
+        self.writePushSymbol('THAT')
+
+        #ARG=SP-numArg-5
+        self.cmdlist=['@SP','D=M','@'+str(numArg+5),'D=D-A','@ARG','M=D']
+        for cmd in self.cmdlist:
+            self.filestream.write(cmd+'\n') 
+
+        #LCL=SP
+        self.cmdlist=['@SP','D=M','@LCL','M=D']
+        for cmd in self.cmdlist:
+            self.filestream.write(cmd+'\n') 
+
+        self.writeGoto(functionName)
+
+        self.filestream.write('(return_address'+str(self.labelindex)+')\n') 
+
+    def writePushSymbol(self, symbolName):
+        self.cmdlist=['@'+symbolName,'D=M']
+        for cmd in self.cmdlist:
+            self.filestream.write(cmd+'\n')
+
+        for cmd in PushDict['pushD']:
+            self.filestream.write(cmd+'\n')
+
 
     def writeReturn(self):
+        # nowFunction.pop()
         self.cmdlist=[]
         # R14=LCL, R15=RET=*(FRAME-5)
         

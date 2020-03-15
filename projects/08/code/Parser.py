@@ -32,7 +32,9 @@ class Parser:
         self.nowline=self.nowline.replace('\n','')
         # delete //
         self.nowline=self.nowline.split('//')[0]
-        print(self.nowline)
+        # delete spases at end of columns
+        self.nowline=re.sub(r'[\s]+$','',self.nowline)
+        #print(self.nowline)
 
 
     def commandType(self):
