@@ -1,6 +1,7 @@
 import re
 from collections import deque
 import JackTokenizer
+import Token
 
 symbolMap = { '<':'&lt;', '>':'&gt;', '&':'&amp;'}
 unaryOpList = ['-','~']
@@ -14,327 +15,350 @@ class CompilationEngine():
         self.writeStream = open(self.outfilename,'w')
         self.jt = JackTokenizer.JackTokenizer(filepass)
         self.tokens=self.jt.tokens
-        self.level=0
-        self.writeBeginNonTerminalTag('class',self.level)
-        self.compileClass(self.level+1)
-        self.writeEndNonTerminalTag('class',self.level)
+        self.compileClass()
 
-    def compileClass(self,level):
+    def compileClass(self):
+        self.writeBeginNonTerminalTag('class')
+        self.compileKeyword('class')
+        self.compileClassName()
+        self.compileSymbol('{')
 
-        if self.valueCheck('class'):
-            self.writeToken(level)
+        while  self.getTokenValue(1) in ['static', 'field']:
+            self.compileClassVarDec()
 
-        if self.categoryCheck('identifier'):
-            self.writeToken(level)
-        
-        if self.valueCheck('{'):
-            self.writeToken(level)
+        while self.getTokenValue(1) in ['constructor','function','method']:
+            self.compileSubroutine()
 
-        while  self.valueCheck('static') or self.valueCheck('field'):
-            self.writeBeginNonTerminalTag("classVarDec",level)
-            self.compileClassVarDec(level+1)
-            self.writeEndNonTerminalTag("classVarDec",level)
-
-        while self.valueCheck('constructor') or self.valueCheck('function') or self.valueCheck('method'):
-            self.writeBeginNonTerminalTag("subroutineDec",level)
-            self.compileSubroutine(level+1)
-            self.writeEndNonTerminalTag("subroutineDec",level)
-
-        if self.tokenCheck('symbol','}'):
-            self.writeToken(level)
-
-
-    def compileClassVarDec(self,level):
-        if self.valueCheck('static') or self.valueCheck('field'):
-            self.writeToken(level)
-
-        #type    
-        self.writeToken(level)
-        #varName
-        self.writeToken(level)
-        while self.valueCheck(','):
-            #','
-            self.writeToken(level)
-            #varName,identifier
-            self.writeToken(level)
-
-        if self.valueCheck(';'):
-            self.writeToken(level)
-
-
-
-    def compileSubroutine(self,level):
-        self.writeToken(level) #constructor or function or method
-        self.writeToken(level) # void or type
-        self.writeToken(level) # subroutineName
-        self.writeToken(level) #'('
-        
-        
-        self.writeBeginNonTerminalTag("parameterList",level)
-        self.compileParameterList(level+1)
-        self.writeEndNonTerminalTag("parameterList",level)
-
-        self.writeToken(level)  #')'
-
-        self.writeBeginNonTerminalTag("subroutineBody",level)
-        self.compileSubroutineBody(level+1)
-        self.writeEndNonTerminalTag("subroutineBody",level)
-
-    def compileSubroutineBody(self,level):
-        self.writeToken(level) #'{'
-        while self.valueCheck('var'):
-            self.writeBeginNonTerminalTag('varDec',level)
-            self.compileVarDec(level+1)
-            self.writeEndNonTerminalTag('varDec',level)
-        self.writeBeginNonTerminalTag("statements",level)
-        self.compileStatements(level+1)
-        self.writeEndNonTerminalTag("statements",level)
-        self.writeToken(level+1)#'}'
-
-    def compileParameterList(self,level):  
-        if not self.valueCheck(')'):
-            self.writeToken(level) # type  
-            self.writeToken(level+1) # varName
-            while self.valueCheck(','):
-                self.writeToken(level) # ','
-                self.writeToken(level) # 'type'
-                self.writeToken(level) # varName
-
-    def compileVarDec(self,level):
-        if self.valueCheck('var'):
-            #var
-            self.writeToken(level)
-            #type
-            self.writeToken(level)
-            #varname
-            self.writeToken(level)
+        self.compileSymbol('}')
             
-            while self.valueCheck(','):
-                #,
-                self.writeToken(level)
-                #varname
-                self.writeToken(level)
+        self.writeEndNonTerminalTag('class')
 
-            #;
-            self.writeToken(level)
+
+    def compileClassVarDec(self):
+        self.writeBeginNonTerminalTag("classVarDec") 
+        self.compileKeyword(['static','field'])
+        self.compileType()
+        self.compileVarName()
+
+        while self.getTokenValue(1)==',':
+            self.compileSymbol(',')
+            self.compileVarName()
+
+        self.compileSymbol(';')
+        self.writeEndNonTerminalTag("classVarDec")
+
+
+
+    def compileSubroutine(self):
+        self.writeBeginNonTerminalTag("subroutineDec")
+
+        self.compileKeyword(['constructor','function','method'])
+        if self.getTokenValue(1) == 'void':
+            self.compileKeyword('void')
+        else:
+            self.compileType()
+
+        self.compileSubroutineName()
+
+        self.compileSymbol('(')        
+        self.compileParameterList()
+        self.compileSymbol(')')
+        
+        self.compileSubroutineBody()
+
+        self.writeEndNonTerminalTag("subroutineDec")
+
+    def compileSubroutineBody(self):
+        self.writeBeginNonTerminalTag("subroutineBody")
+        
+        self.compileSymbol('{')
+        while self.getTokenValue(1)=='var':
+            self.compileVarDec()
+        self.compileStatements()
+        self.compileSymbol('}')
+        
+        self.writeEndNonTerminalTag("subroutineBody")
+
+    def compileParameterList(self):
+        self.writeBeginNonTerminalTag("parameterList")
+        if not self.getTokenValue(1)==')':
+            self.compileType() 
+            self.compileVarName()
+            while self.getTokenValue(1)==',':
+                self.compileSymbol(',') 
+                self.compileType() 
+                self.compileVarName() 
+        self.writeEndNonTerminalTag("parameterList")
+
+    def compileVarDec(self):
+        self.writeBeginNonTerminalTag('varDec')
+
+        self.compileKeyword('var')
+        self.compileType()
+        self.compileVarName()
+    
+        while self.getTokenValue(1)==',':
+            self.compileSymbol(',')
+            self.compileVarName()
+
+        self.compileSymbol(';')
+
+        self.writeEndNonTerminalTag('varDec')
             
 
 
-    def compileStatements(self,level):
-        while True:
-            if self.valueCheck('let'):
-                self.writeBeginNonTerminalTag('letStatement',level)
-                self.compileLet(level+1)
-                self.writeEndNonTerminalTag('letStatement',level)
-            elif self.valueCheck('if'):
-                self.writeBeginNonTerminalTag('ifStatement',level)
-                self.compileIf(level+1)
-                self.writeEndNonTerminalTag('ifStatement',level)
-            elif self.valueCheck('while'):
-                self.writeBeginNonTerminalTag('whileStatement',level)
-                self.compileWhile(level+1)
-                self.writeEndNonTerminalTag('whileStatement',level)
-            elif self.valueCheck('do'):
-                self.writeBeginNonTerminalTag('doStatement',level)
-                self.compileDo(level+1)
-                self.writeEndNonTerminalTag('doStatement',level)
-            elif self.valueCheck('return'):
-                self.writeBeginNonTerminalTag('returnStatement',level)
-                self.compileReturn(level+1)
-                self.writeEndNonTerminalTag('returnStatement',level)
-            else:
-                break
+    def compileStatements(self):
+        self.writeBeginNonTerminalTag("statements")
+        while self.getTokenValue(1) in ['if','do','let','return','while']:
+            if self.getTokenValue(1)=='let':
+                self.compileLet()
+            elif self.getTokenValue(1)=='if':
+                self.compileIf()
+            elif self.getTokenValue(1)=='while':
+                self.compileWhile()
+            elif self.getTokenValue(1)=='do':
+                self.compileDo()
+            elif self.getTokenValue(1)=='return':
+                self.compileReturn()
+            
+        self.writeEndNonTerminalTag("statements")
         
             
 
-    def compileDo(self,level):
-        self.writeToken(level) #do
-        self.compileSubroutineCall(level)
-        self.writeToken(level) #;
+    def compileDo(self):
+        self.writeBeginNonTerminalTag('doStatement')
+        self.compileKeyword('do')
+        self.compileSubroutineCall()
+        self.compileSymbol(';')
+        self.writeEndNonTerminalTag('doStatement')
 
-    def compileSubroutineCall(self,level):
+    def compileSubroutineCall(self):
         if self.getTokenValue(2) == '(':
-            self.writeToken(level) # subroutineName
-            self.writeToken(level) # ( 
-            self.writeBeginNonTerminalTag('expressionList',level)
-            self.compileExpressionList(level+1)
-            self.writeEndNonTerminalTag('expressionList',level)
-            self.writeToken(level) # )
+            self.compileSubroutineName()
+            self.compileSymbol('(')
+            self.compileExpressionList()
+            self.compileSymbol(')')
 
         elif self.getTokenValue(2) == '.':
-            self.writeToken(level) # className or Varname
-            self.writeToken(level) # . 
-            self.writeToken(level) # subroutineName
-            self.writeToken(level) # (
-            self.writeBeginNonTerminalTag('expressionList',level)
-            self.compileExpressionList(level+1)
-            self.writeEndNonTerminalTag('expressionList',level)
-            self.writeToken(level) # )
+            self.compileIdentifier() # className or Varname
+            self.compileSymbol('.') # . 
+            self.compileSubroutineName() # subroutineName
+            self.compileSymbol('(') 
+            self.compileExpressionList()
+            self.compileSymbol(')') 
 
 
+    def compileLet(self):
+        self.writeBeginNonTerminalTag('letStatement')
+        self.compileKeyword('let')
+        self.compileVarName()
 
+        if self.getTokenValue(1)=='[':
+            self.compileSymbol('[') 
+            self.compileExpression()
+            self.compileSymbol(']')
 
+        self.compileSymbol('=')
+        self.compileExpression()
+        self.compileSymbol(';')
 
-    def compileLet(self,level):
-        self.writeToken(level) #let
-        self.writeToken(level) #verName
-
-        if self.valueCheck('['):
-            self.writeToken(level) #[
-            self.writeBeginNonTerminalTag("expression",level)
-            self.compileExpression(level+1)
-            self.writeEndNonTerminalTag("expression",level)
-            self.writeToken(level) #]
-
-        self.writeToken(level) #=
-        self.writeBeginNonTerminalTag("expression",level)
-        self.compileExpression(level+1)
-        self.writeEndNonTerminalTag("expression",level)
-        self.writeToken(level) #;
+        self.writeEndNonTerminalTag('letStatement')
         
 
-    def compileWhile(self,level):
-        self.writeToken(level) #while
+    def compileWhile(self):
+        self.writeBeginNonTerminalTag('whileStatement')
 
-        self.writeToken(level) #(
-        self.writeBeginNonTerminalTag("expression",level)
-        self.compileExpression(level+1)
-        self.writeEndNonTerminalTag("expression",level)
-        self.writeToken(level) #)
+        self.compileKeyword('while')
 
-        self.writeToken(level) #{
-        self.writeBeginNonTerminalTag("statements",level)
-        self.compileStatements(level+1)
-        self.writeEndNonTerminalTag("statements",level)
-        self.writeToken(level) #}
+        self.compileSymbol('(') 
+        self.compileExpression()
+        self.compileSymbol(')')
 
+        self.compileSymbol('{') 
+        self.compileStatements()
+        self.compileSymbol('}') 
 
+        self.writeEndNonTerminalTag('whileStatement')
 
-    def compileReturn(self,level):
-        self.writeToken(level) #retrun
-        if not self.valueCheck(';'):
-            self.writeBeginNonTerminalTag('expression',level)
-            self.compileExpression(level+1)
-            self.writeEndNonTerminalTag('expression',level)
-        self.writeToken(level) #;
+    def compileReturn(self):
+        self.writeBeginNonTerminalTag('returnStatement')
+        self.compileKeyword('return')
+        if not self.getTokenValue(1)==';':
+            self.compileExpression()
+        self.compileSymbol(';') #;
+        self.writeEndNonTerminalTag('returnStatement')
 
-    def compileIf(self,level):
-        self.writeToken(level) #if
+    def compileIf(self):
+        self.writeBeginNonTerminalTag('ifStatement')
 
-        self.writeToken(level) #(
-        self.writeBeginNonTerminalTag("expression",level)
-        self.compileExpression(level+1)
-        self.writeEndNonTerminalTag("expression",level)
-        self.writeToken(level) #)
+        self.compileKeyword('if') 
+        self.compileSymbol('(') 
+        self.compileExpression()
+        self.compileSymbol(')')
 
-        self.writeToken(level) #{
-        self.writeBeginNonTerminalTag("statements",level)
-        self.compileStatements(level+1)
-        self.writeEndNonTerminalTag("statements",level)
-        self.writeToken(level) #}
+        self.compileSymbol('{') 
+        self.compileStatements()
+        self.compileSymbol('}') 
 
-        if self.valueCheck('else'):
-            self.writeToken(level) #else
-            self.writeToken(level) #{
-            self.writeBeginNonTerminalTag('statements',level)
-            self.compileStatements(level+1)
-            self.writeEndNonTerminalTag('statements',level)
-            self.writeToken(level) #}
+        if self.getTokenValue(1)=='else':
+            self.compileKeyword('else') 
+            self.compileSymbol('{') 
+            self.compileStatements()
+            self.compileSymbol('}') 
+        
+        self.writeEndNonTerminalTag('ifStatement')
 
 
-    def compileExpression(self,level):
-        self.writeBeginNonTerminalTag("term",level)
-        self.compileTerm(level+1)
-        self.writeEndNonTerminalTag("term",level)
+    def compileExpression(self):
+        self.writeBeginNonTerminalTag("expression")
+        self.compileTerm()
 
         while self.getTokenValue(1) in opList:
-            self.writeToken(level) #op
-            self.writeBeginNonTerminalTag("term",level)
-            self.compileTerm(level+1)
-            self.writeEndNonTerminalTag("term",level)
+            self.compileSymbol(opList) 
+            self.compileTerm()
+
+        self.writeEndNonTerminalTag("expression")
 
 
-    def compileTerm(self,level):
-        if self.categoryCheck('integerConstant'):
-            self.writeToken(level) # integerConstant
-        elif self.categoryCheck('stringConstant'):
-            self.writeToken(level) # stringConstant
+    def compileTerm(self):
+        self.writeBeginNonTerminalTag("term")
+
+        if self.getTokenCategory(1)=='integerConstant':
+            self.compileIntegerConstatnt() 
+        elif self.getTokenCategory(1)=='stringConstant':
+            self.compileStringConstant()
         elif self.getTokenValue(1) in keywordConstList:
-            self.writeToken(level) # keywordConstant
+            self.compileKeyword(keywordConstList) # keywordConstant
         
-        elif self.valueCheck('('):
-            self.writeToken(level) #(
-            self.writeBeginNonTerminalTag('expression',level)
-            self.compileExpression(level+1)
-            self.writeEndNonTerminalTag('expression',level)
-            self.writeToken(level) #)
+        elif self.getTokenValue(1)=='(':
+            self.compileSymbol('(')
+            self.compileExpression()
+            self.compileSymbol(')')
 
         elif self.getTokenValue(1) in unaryOpList:
-            self.writeToken(level) # unaryOp
-            self.writeBeginNonTerminalTag('term',level)
-            self.compileTerm(level+1)
-            self.writeEndNonTerminalTag('term',level)
+            self.compileSymbol(unaryOpList)
+            self.compileTerm()
 
-        elif self.categoryCheck('identifier'):
+        elif self.getTokenCategory(1)=='identifier':
             if self.getTokenValue(2) in ['(','.']:
-                self.compileSubroutineCall(level)
+                self.compileSubroutineCall()
             elif self.getTokenValue(2) == '[':
-                self.writeToken(level) # varName
-                self.writeToken(level) # [
-                self.writeBeginNonTerminalTag('expression',level)
-                self.compileExpression(level+1)
-                self.writeEndNonTerminalTag('expression',level)
-                self.writeToken(level) # ]
+                self.compileVarName()
+                self.compileSymbol('[')
+                self.compileExpression()
+                self.compileSymbol(']')
             else:
-                self.writeToken(level) # varName
+                self.compileVarName()
+
+        self.writeEndNonTerminalTag("term")
 
 
 
-    def compileExpressionList(self,level):
-        if not self.valueCheck(')'):
-            self.writeBeginNonTerminalTag('expression',level)
-            self.compileExpression(level+1)
-            self.writeEndNonTerminalTag('expression',level)
+    def compileExpressionList(self):
+        self.writeBeginNonTerminalTag('expressionList')
+        if not self.getTokenValue(1)==')':
+            self.compileExpression()
 
-            while self.valueCheck(','):
-                self.writeToken(level) #,
-                self.writeBeginNonTerminalTag('expression',level)
-                self.compileExpression(level+1)
-                self.writeEndNonTerminalTag('expression',level)
+            while self.getTokenValue(1)==',':
+                self.writeToken() #,
+                self.compileExpression()
 
-    
+        self.writeEndNonTerminalTag('expressionList')
 
-    def tokenCheck(self,category,value):
-        self.firsttoken = self.tokens[0]
-        return category==self.firsttoken[0] and value==self.firsttoken[1]
+    def compileIdentifier(self):
+        if self.getTokenCategory(1)=='identifier':
+            self.writeToken()
+        else:
+            self.raise_syntax_error('identifier is required')
+        
+    def compileKeyword(self,value):
+        if not self.getTokenCategory(1)=='keyword':
+            self.raise_syntax_error('keyword is required')
 
-    def categoryCheck(self,category):
-        self.firsttoken = self.tokens[0]
-        return category==self.firsttoken[0]
+        if type(value) is str:
+            if self.getTokenValue(1) == value:
+                self.writeToken()
+            else:
+                self.raise_syntax_error('unexpected keyword(str)')
+        elif type(value) is list: 
+            if self.getTokenValue(1) in value:
+                self.writeToken()
+        else:
+            self.raise_syntax_error('unexpected keyword(list)')
 
-    def valueCheck(self,value):
-        self.firsttoken = self.tokens[0]
-        return value==self.firsttoken[1]
+    def compileClassName(self):
+        self.compileIdentifier()
+
+    def compileSymbol(self,value):
+        if not self.getTokenCategory(1)=='symbol':
+            self.raise_syntax_error('symbol is required')
+
+        if type(value) is str:
+            if self.getTokenValue(1) == value:
+                self.writeToken()
+            else:
+                self.raise_syntax_error('unexpected symbol')
+        elif type(value) is list: 
+            if self.getTokenValue(1) in value:
+                self.writeToken()
+        else:
+            self.raise_syntax_error('unexpected symbol')
+
+
+    def compileType(self):
+        if self.getTokenValue(1) in ['int','char','boolean']:
+            self.compileKeyword(['int','char','boolean'])
+        elif self.getTokenCategory(1)=='identifier':
+            self.compileIdentifier()
+        else:
+            self.raise_syntax_error('unexpected type(not int or char or boolean or classname)')
+
+
+    def compileVarName(self):
+        self.compileIdentifier()
+
+    def compileSubroutineName(self):
+        self.compileIdentifier()
+  
+    def compileIntegerConstatnt(self):
+        if self.getTokenCategory(1)=='integerConstant' and (0 <= int(self.getTokenValue(1)) <= 32767):
+            self.writeToken()
+        else:
+            self.raise_syntax_error('Type is not integerConstant or notin [0,32767]')
+
+    def compileStringConstant(self):
+        if self.getTokenCategory(1)=='stringConstant':
+            self.writeToken()
+        else:
+            self.raise_syntax_error('Type is not stringConstant')
 
     def getTokenCategory(self,index):
         self.token = self.tokens[index-1]
-        return self.token[0]
+        return self.token.getType()
     
     def getTokenValue(self,index):
         self.token = self.tokens[index-1]
-        return self.token[1]
+        return self.token.getValue()
 
-    def writeToken(self,level):
+    def writeToken(self):
         self.nowtoken = self.tokens.popleft()
-        if self.nowtoken[1] in symbolMap.keys():
-            self.nowtoken[1] = symbolMap[self.nowtoken[1]]
-        self.writeStream.write("  "*level+"<%s> %s </%s>\n" % (self.nowtoken[0],self.nowtoken[1],self.nowtoken[0]))
+        if self.nowtoken.getValue() in symbolMap.keys():
+            self.writeStream.write("<%s> %s </%s>\n" % (self.nowtoken.getType(),symbolMap[self.nowtoken.getValue()],self.nowtoken.getType()))
+        else:
+            self.writeStream.write("<%s> %s </%s>\n" % (self.nowtoken.getType(),self.nowtoken.getValue(),self.nowtoken.getType()))
 
-    def writeBeginNonTerminalTag(self,value,level):
-        self.writeStream.write("  "*level+"<"+value+">\n")
+    def writeBeginNonTerminalTag(self,value):
+        self.writeStream.write("<"+value+">\n")
     
-    def writeEndNonTerminalTag(self,value,level):
-        self.writeStream.write("  "*level+"</"+value+">\n")
+    def writeEndNonTerminalTag(self,value):
+        self.writeStream.write("</"+value+">\n")
+
+    def raise_syntax_error(self, msg):
+        msg += '\n the token type is : '
+        msg += self.getTokenCategory(1)
+        msg += '\n the token value is : '
+        msg += self.getTokenValue(1)
+        raise Exception('%s ' % msg)
 
 
 
